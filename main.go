@@ -9,9 +9,9 @@ import (
 // 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0,
 func main() {
 	// Пример данных для кодирования
-	data := []int{1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0}
+	data := []int{0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1}
 	var controlBit []int
-
+	// 1 0 0 1 1 0 0 0 0 1 0 0 0 0 1 0 1 1 1 0 1
 	for i := 0; i < len(data); i++ {
 		if isPowerOfTwo(i + 1) {
 			controlBit = append(controlBit, i)
@@ -21,24 +21,27 @@ func main() {
 	fmt.Println(controlBit)
 
 	// Кодирование данных
-	encodedData, err := encodeHamming(controlBit, data)
-	if err != nil {
-		fmt.Println("Ошибка кодирования:", err)
-		return
-	}
+	encodedData, control_sum := encodeHamming(controlBit, data)
+
+	fmt.Println("контрольная сумма - ", control_sum)
 
 	fmt.Println("Исходные данные:", data)
 	fmt.Println("Закодированные данные:", encodedData)
+	fmt.Println("Длина закодированных данных", len(encodedData))
 
 	// Имитация ошибок в переданных данных (поменяем один бит)
 
 	//encodedData[6] ^= 1
 	randomPlaceError(encodedData)
+	randomPlaceError(encodedData)
+	//encodedData[2] = 1
+	//encodedData[3] = 0
+	////encodedData[6] = 1
 
 	fmt.Println("Данные с ошибкой:", encodedData)
 
 	// Декодирование данных с возможностью исправления ошибок
-	decodedData, err := decodeHamming(controlBit, encodedData, len(data))
+	decodedData, err := decodeHamming(controlBit, encodedData, control_sum)
 	if err != nil {
 		fmt.Println("Ошибка декодирования:", err)
 	} else {
@@ -55,7 +58,7 @@ func main() {
 /*
 Кодирует входные данные Хемминг-кодом с n-ым количеством символов и контрольных битов
 */
-func encodeHamming(controlBit []int, data []int) ([]int, error) {
+func encodeHamming(controlBit []int, data []int) ([]int, []int) {
 	// Создаем закодированный массив
 	encodedData := make([]int, len(data)+len(controlBit))
 
@@ -69,49 +72,39 @@ func encodeHamming(controlBit []int, data []int) ([]int, error) {
 
 	}
 
-	for i := 0; i < len(encodedData); i++ {
-		if implContains(controlBit, i) {
-			encodedData[i] = calculateParityBit(encodedData, getCheckIndices(controlBit, i+1, len(data)))
-		} else {
-			continue
-		}
+	for _, index := range controlBit {
+		indexes := getCheckIndices(index+1, len(encodedData))
+		encodedData[index] = calculateParityBit(encodedData, indexes)
+
 	}
 
-	return encodedData, nil
-}
+	controlsSum := make([]int, len(encodedData))
 
-/*
-Рассчитывает значение контрольного бита (просто вычисляет четность суммы и в зависимости от нее выдает либо 0, либо 1)
-*/
-func calculateParityBit(data []int, indices []int) int {
-	parityBit := 0
-	for _, index := range indices {
-		//fmt.Println(data, index)
-		if data[index] == 1 {
-			parityBit += data[index]
-		}
+	for _, index := range controlBit {
+		indexes := getCheckIndices(index+1, len(encodedData))
+		controlsSum[index] = calculateParityBit(encodedData, indexes)
+		fmt.Println(controlsSum[index])
+
 	}
-	if parityBit%2 == 0 {
-		return 0
-	} else {
-		return 1
-	}
+
+	return encodedData, controlsSum
 }
 
 // decodeHamming декодирует данные Хемминг-кода (7, 4) и исправляет ошибки
-func decodeHamming(parityBitIndices []int, encodedData []int, countData int) ([]int, error) {
-	decodedData := make([]int, countData)
-
+func decodeHamming(controlBit []int, encodedData []int, control_sum []int) ([]int, error) {
+	decodedData := make([]int, len(encodedData)-len(controlBit))
 	// Проверяем контрольные биты
 	errorPosition := 0
-	for _, index := range parityBitIndices {
-		calculatedParityBit := calculateParityBit(encodedData, getCheckIndices(parityBitIndices, index+1, countData))
-		//fmt.Println(calculatedParityBit, encodedData[index])
+	for _, index := range controlBit {
+		indexes := getCheckIndices(index+1, len(encodedData))
+		calculatedParityBit := calculateParityBit(encodedData, indexes)
 
-		if calculatedParityBit != encodedData[index] {
+		fmt.Println(calculatedParityBit, control_sum[index], index)
+		if calculatedParityBit != control_sum[index] {
 			errorPosition += index + 1
 		}
 	}
+	fmt.Println(errorPosition)
 
 	// Если есть ошибка, исправляем
 	if errorPosition > 0 {
@@ -122,7 +115,7 @@ func decodeHamming(parityBitIndices []int, encodedData []int, countData int) ([]
 	count := 0
 	//fmt.Println(parityBitIndices, len(encodedData))
 	for i := 0; i < len(encodedData); i++ {
-		if implContains(parityBitIndices, i) {
+		if implContains(controlBit, i) {
 			continue
 		}
 		//fmt.Println(count, i, encodedData[i], encodedData)
@@ -130,27 +123,42 @@ func decodeHamming(parityBitIndices []int, encodedData []int, countData int) ([]
 		count++
 
 	}
+
 	return decodedData, nil
+}
+
+/*
+Рассчитывает значение контрольного бита (просто вычисляет четность суммы и в зависимости от нее выдает либо 0, либо 1)
+*/
+func calculateParityBit(data []int, indices []int) int {
+	parityBit := 0
+	for _, index := range indices {
+		if data[index] == 1 {
+			parityBit += data[index]
+		}
+	}
+
+	if parityBit%2 == 0 {
+		return 0
+	} else {
+		return 1
+	}
 }
 
 /*
 Возвращает индексы битов, используемых для проверки контрольного бита (индексы, где должны стоять те биты, которые потом будем суммировать, и смотреть на четность/нечетность суммы 1-ек и делать выводы,
 была ошибка или нет
 */
-func getCheckIndices(parityBitIndices []int, parityBitIndex int, countData int) []int {
+func getCheckIndices(parityBitIndex int, countData int) []int {
 	indices := make([]int, 0)
 
 	// устанавливаем контрольный индекс, который будет соотв. шагу
 	step := parityBitIndex
 	// переменная, которая отвечает за подсчет интервала (например, при шаге в 2 в интервале должно быть пройдено 2 значения)
-	i := step
+	i := parityBitIndex
 	for step <= countData {
-		//fmt.Println("step", step-1, i, countData, parityBitIndex)
-
 		if i != 0 {
-			if !implContains(parityBitIndices, step-1) {
-				indices = append(indices, step-1)
-			}
+			indices = append(indices, step-1)
 			// нашли индекс, уменьшили переменную, двигаемся дальше
 			i -= 1
 			step += 1
@@ -162,6 +170,7 @@ func getCheckIndices(parityBitIndices []int, parityBitIndex int, countData int) 
 		}
 
 	}
+	//fmt.Println(indices, parityBitIndex)
 	return indices
 }
 

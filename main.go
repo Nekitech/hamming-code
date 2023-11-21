@@ -99,7 +99,6 @@ func decodeHamming(controlBit []int, encodedData []int, control_sum []int) ([]in
 		indexes := getCheckIndices(index+1, len(encodedData))
 		calculatedParityBit := calculateParityBit(encodedData, indexes)
 
-		fmt.Println(calculatedParityBit, control_sum[index], index)
 		if calculatedParityBit != control_sum[index] {
 			errorPosition += index + 1
 		}
@@ -118,7 +117,6 @@ func decodeHamming(controlBit []int, encodedData []int, control_sum []int) ([]in
 		if implContains(controlBit, i) {
 			continue
 		}
-		//fmt.Println(count, i, encodedData[i], encodedData)
 		decodedData[count] = encodedData[i]
 		count++
 

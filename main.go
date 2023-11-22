@@ -107,7 +107,7 @@ func decodeHamming(controlBit []int, encodedData []int, control_sum []int) ([]in
 
 	// Если есть ошибка, исправляем
 	if errorPosition > 0 {
-		fmt.Println("Исправлен бит на позиции:", errorPosition-1, "::|::", encodedData[errorPosition-1], " -> ", encodedData[errorPosition-1]^1)
+		fmt.Println("Исправлен бит на позиции:", errorPosition, "::|::", encodedData[errorPosition-1], " -> ", encodedData[errorPosition-1]^1)
 		encodedData[errorPosition-1] ^= 1
 	}
 
@@ -193,7 +193,7 @@ func isPowerOfTwo(n int) bool {
 
 func randomPlaceError(arr []int) {
 	index := getRandomIndex(arr)
-	fmt.Println("Индекс с ошибкой -> ", index)
+	fmt.Println("Индекс с ошибкой -> ", index+1)
 	arr[index] ^= 1
 }
 
